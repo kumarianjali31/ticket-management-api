@@ -14,10 +14,12 @@ namespace TicketManagement.Controllers
     public class TicketController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly ILogger<TicketController> _logger;
 
-        public TicketController(AppDbContext context)
+        public TicketController(AppDbContext context, ILogger<TicketController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         [HttpPost]
@@ -44,6 +46,9 @@ namespace TicketManagement.Controllers
             _context.Tickets.Add(ticket);
 
             await _context.SaveChangesAsync();
+            _logger.LogInformation(
+            "Ticket created successfully. Ticket Id: {TicketId}",
+                ticket.Id);
 
             return Ok(ticket);
         }
