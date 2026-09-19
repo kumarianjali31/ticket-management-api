@@ -1,10 +1,11 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using TicketManagement.Data;
 using TicketManagement.DTOs;
 using TicketManagement.Models;
-using Microsoft.EntityFrameworkCore;
+using TicketManagement.Services;
 
 namespace TicketManagement.Controllers
 {
@@ -15,15 +16,17 @@ namespace TicketManagement.Controllers
     {
         private readonly AppDbContext _context;
         private readonly ILogger<TicketController> _logger;
+        private readonly IQueueService _queueService;
 
-        public TicketController(AppDbContext context, ILogger<TicketController> logger)
+        public TicketController(AppDbContext context, ILogger<TicketController> logger, IQueueService queueService)
         {
             _context = context;
             _logger = logger;
+            _queueService = queueService;
         }
 
         [HttpPost]
-        [Authorize(Roles = "Employee")]
+        [Authorize(Roles = "Employee, Agent")]
         public async Task<IActionResult> CreateTicket(TicketRequest request)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -49,6 +52,9 @@ namespace TicketManagement.Controllers
             _logger.LogInformation(
             "Ticket created successfully. Ticket Id: {TicketId}",
                 ticket.Id);
+
+            var message = $"TicketCreated:{ticket.Id}";
+            await _queueService.SendMessageAsync("ticket-notifications", message);
 
             return Ok(ticket);
         }
